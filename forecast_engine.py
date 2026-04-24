@@ -40,23 +40,45 @@ def run_ai_forecast(df, horizon=6):
 # --- 4. DEHŞET DASHBOARD (Arayüz) ---
 st.title("📈 MedAura Sales Forecast")
 
-data = get_data()
+# Veriyi çekelim (Yeni fonksiyona göre actuals ve forecasts dönüyor)
+actuals, forecasts = get_data()
 
-if not data.empty:
-    # KPI Kartları (Ciro, Kar, Prim)
-    total_rev = data['revenue_euro'].sum()
-    total_prof = data['profit_euro'].sum()
+# Eğer herhangi bir veri varsa (Tahmin veya Fatura)
+if not actuals.empty or not forecasts.empty:
+    # KPI Kartları için hesaplamalar
+    total_rev = actuals['revenue_euro'].sum() if not actuals.empty else 0
+    target_rev = forecasts['revenue_euro'].sum() if not forecasts.empty else 0
+    total_prof = actuals['profit_euro'].sum() if not actuals.empty else 0
     
+    # Dashboard Başlığı ve Kartlar
+    st.markdown("---")
     col1, col2, col3 = st.columns(3)
-    col1.metric("Toplam Ciro", f"{total_rev:,.0f} €")
-    col2.metric("Net Kar", f"{total_prof:,.0f} €")
     
-    # AI Tahmin Grafiği
-    st.subheader("🔮 12 Aylık AI Satış Tahmini")
-    model, fcst = run_ai_forecast(data)
-    fig = px.line(fcst, x='ds', y='yhat', title="Gelecek Projeksiyonu")
-    st.plotly_chart(fig, use_container_width=True)
+    col1.metric("Gerçekleşen Ciro (Fatura)", f"{total_rev:,.0f} €")
+    col2.metric("Hedeflenen Ciro (Tahmin)", f"{target_rev:,.0f} €")
     
-    st.success("🤖 AI Notu: Mevcut trende göre önümüzdeki ay %5 büyüme bekleniyor.")
+    # Başarı Oranı Hesaplama
+    progress = (total_rev / target_rev) * 100 if target_rev > 0 else 0
+    col3.metric("Hedef Gerçekleşme %", f"% {progress:.1f}")
+
+    st.markdown("---")
+    
+    # 2. Satır Kartlar (Kar ve Prim Bilgisi)
+    c1, c2 = st.columns(2)
+    c1.metric("Toplam Net Kar", f"{total_prof:,.0f} €")
+    # Örnek prim: Karın %2'si olarak hesaplansın
+    c2.metric("Hesaplanan Prim Havuzu", f"{total_prof * 0.02:,.0f} €")
+
+    # AI Tahmini: Sadece gerçek fatura verileri üzerinden geleceği öngörelim
+    if not actuals.empty:
+        st.subheader("📈 12 Aylık AI Satış Tahmini")
+        model, fcst = run_ai_forecast(actuals)
+        fig = px.line(fcst, x='ds', y='yhat', 
+                     title="Mevcut Fatura Trendine Göre Gelecek Projeksiyonu",
+                     labels={'ds': 'Tarih', 'yhat': 'Tahmini Ciro (€)'})
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.info("💡 Henüz fatura kesilmemiş. AI tahmini yapabilmek için gerçek satış verisi (invoice) bekleniyor.")
+
 else:
-    st.warning("Henüz veri girişi yapılmadı. Lovable üzerinden veri girildiğinde burası canlanacak.")
+    st.warning("⚠️ Henüz veri girişi yapılmadı. Lovable üzerinden 'Forecast' veya 'Fatura' girdiğinizde burası canlanacak.")
