@@ -13,12 +13,15 @@ st.set_page_config(page_title="MedAura AI Forecast", layout="wide")
 
 # --- 2. VERİ ÇEKME VE ANALİZ ---
 def get_data():
-    # Supabase'den girilen satışları çek
     response = supabase.table("sales_entries").select("*").execute()
     df = pd.DataFrame(response.data)
     if not df.empty:
         df['created_at'] = pd.to_datetime(df['created_at'])
-    return df
+        # Status sütununa göre ayrım yap (Lovable bunu 'forecast' veya 'invoice' olarak kaydediyor)
+        actuals = df[df['status'] == 'invoice']
+        forecasts = df[df['status'] == 'forecast']
+        return actuals, forecasts
+    return pd.DataFrame(), pd.DataFrame()
 
 # --- 3. AI TAHMİN MOTORU (Prophet) ---
 def run_ai_forecast(df, horizon=6):
