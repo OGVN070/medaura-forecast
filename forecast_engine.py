@@ -35,7 +35,7 @@ def run_ai_forecast(df, horizon=6):
     return m, forecast
 
 # --- 4. DEHŞET DASHBOARD (Arayüz) ---
-st.title("💎 MedAura Ticari Zeka & Forecast")
+st.title("📈 MedAura Sales Forecast")
 
 data = get_data()
 
