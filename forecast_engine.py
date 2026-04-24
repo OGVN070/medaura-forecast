@@ -5,8 +5,8 @@ from prophet import Prophet
 import plotly.express as px
 
 # --- 1. BAĞLANTI (Görseldeki URL ve Key bilgilerini buraya yapıştır) ---
-URL = "https://buraya-kendi-url-adresini-yapistir.supabase.co"
-KEY = "buraya-kendi-anon-key-adresini-yapistir"
+URL = "https://vbmzsfrbfgbxfbqlrutx.supabase.co"
+KEY = "sb_publishable_m3NadgtQs-AijCRabSPm6A_UQ0eRfiN"
 supabase = create_client(URL, KEY)
 
 st.set_page_config(page_title="MedAura AI Forecast", layout="wide")
