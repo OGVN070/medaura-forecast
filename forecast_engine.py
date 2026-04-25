@@ -13,14 +13,26 @@ st.set_page_config(page_title="MedAura AI Forecast", layout="wide")
 
 # --- 2. VERİ ÇEKME VE ANALİZ ---
 def get_data():
-    response = supabase.table("sales_entries").select("*").execute()
-    df = pd.DataFrame(response.data)
-    if not df.empty:
-        df['created_at'] = pd.to_datetime(df['created_at'])
-        # Status sütununa göre ayrım yap (Lovable bunu 'forecast' veya 'invoice' olarak kaydediyor)
-        actuals = df[df['status'] == 'invoice']
-        forecasts = df[df['status'] == 'forecast']
-        return actuals, forecasts
+    try:
+        response = supabase.table("sales_entries").select("*").execute()
+        df = pd.DataFrame(response.data)
+        if not df.empty:
+            # Kolon isimlerini Lovable'ın muhtemel isimlendirmelerine göre kontrol et
+            col_map = {
+                'customer': 'customer_name',
+                'product': 'product_name',
+                'type': 'status'
+            }
+            df = df.rename(columns=col_map)
+            
+            # Tarih kolonunu temizle
+            df['created_at'] = pd.to_datetime(df['created_at'])
+            
+            actuals = df[df['status'].str.lower() == 'invoice'] if 'status' in df.columns else pd.DataFrame()
+            forecasts = df[df['status'].str.lower() == 'forecast'] if 'status' in df.columns else pd.DataFrame()
+            return actuals, forecasts
+    except Exception as e:
+        print(f"Hata: {e}")
     return pd.DataFrame(), pd.DataFrame()
 
 # --- 3. AI TAHMİN MOTORU (Prophet) ---
