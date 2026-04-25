@@ -37,87 +37,71 @@ def run_ai_forecast(df, horizon=6):
     forecast = m.predict(future)
     return m, forecast
 
-# --- 4. DEHŞET DASHBOARD (Arayüz) ---
-st.title("📈 MedAura Satış Tahmini & Yönetici Paneli")
+# --- 4. YÖNETİCİ ÖZET PANELLERİ (RENKLİ) ---
+st.title("📊 MedAura Satış & Finans Paneli")
 
-# Veriyi çekelim
 actuals, forecasts = get_data()
 
-if not actuals.empty or not forecasts.empty:
-    # --- ÜST KPI KARTLARI ---
-    total_rev = actuals['revenue_euro'].sum() if not actuals.empty else 0
-    target_rev = forecasts['revenue_euro'].sum() if not forecasts.empty else 0
-    total_prof = actuals['profit_euro'].sum() if not actuals.empty else 0
+# Renk Paleti Tanımlama
+COLOR_SCHEME = ["#00B4D8", "#90E0EF", "#0077B6", "#48CAE4"]
+
+def render_summary_table(df_in, title, color):
+    if df_in.empty:
+        st.info(f"{title} için henüz kayıt bulunmuyor.")
+        return
+
+    # Hesaplama Mantığı
+    # MF Maliyeti = Satış Fiyatı - Kar (Bize maliyeti verir)
+    df_in['MF_Maliyet'] = df_in['revenue_euro'] - df_in['profit_euro']
     
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Gerçekleşen Ciro (Fatura)", f"{total_rev:,.0f} €")
-    col2.metric("Hedeflenen Ciro (Tahmin)", f"{target_rev:,.0f} €")
-    progress = (total_rev / target_rev) * 100 if target_rev > 0 else 0
-    col3.metric("Genel Başarı Oranı", f"% {progress:.1f}")
+    # İstenen Kolonlar
+    df_in['Ciro_Hariç'] = df_in['revenue_euro']
+    df_in['Ciro_Dahil'] = df_in['revenue_euro'] * 1.20
+    df_in['Net_Ciro_MF_Dusus_Haric'] = df_in['revenue_euro'] - df_in['MF_Maliyet']
 
-    st.markdown("---")
+    # 1. TABLO: DETAYLI ÖZET
+    st.subheader(f"📋 {title} - Detaylı Ürün & Müşteri Özeti")
+    customer_table = df_in.groupby(['customer_name', 'region', 'product_name']).agg({
+        'qty_paid': 'sum',
+        'qty_free': 'sum',
+        'Ciro_Hariç': 'sum',
+        'Ciro_Dahil': 'sum',
+        'Net_Ciro_MF_Dusus_Haric': 'sum'
+    }).reset_index()
 
-    # --- YÖNETİCİ ÖZET TABLOSU FONKSİYONU ---
-    def get_summary(df_in):
-        if df_in.empty: return pd.DataFrame()
-        # Gruplama
-        summary = df_in.groupby(['region', 'product_name']).agg({
-            'qty_paid': 'sum',
-            'qty_free': 'sum',
-            'revenue_euro': 'sum',
-            'profit_euro': 'sum'
-        }).reset_index()
-        
-        # Hesaplamalar
-        summary['Toplam Adet'] = summary['qty_paid'] + summary['qty_free']
-        summary['Ciro (KDV Dahil)'] = summary['revenue_euro'] * 1.20
-        summary['Ciro (KDV Hariç)'] = summary['revenue_euro']
-        summary['MF Maliyeti (KDV Hariç)'] = summary['Ciro (KDV Hariç)'] - summary['profit_euro']
-        summary['Brüt Kar'] = summary['profit_euro']
-        return summary
+    st.dataframe(customer_table.style.format({
+        'Ciro_Hariç': '{:,.2f} €',
+        'Ciro_Dahil': '{:,.2f} €',
+        'Net_Ciro_MF_Dusus_Haric': '{:,.2f} €'
+    }).background_gradient(cmap='Blues', subset=['Net_Ciro_MF_Dusus_Haric']), use_container_width=True)
 
-    act_sum = get_summary(actuals)
-    tar_sum = get_summary(forecasts)
-
-    st.subheader("📋 Bölge & Ürün Bazlı Yönetici Özeti")
+    # 2. TABLO: BÖLGE BAZLI NET CİRO
+    st.subheader(f"🌍 {title} - Bölge Net Ciro (KDV Hariç)")
+    region_table = df_in.groupby('region').agg({
+        'Net_Ciro_MF_Dusus_Haric': 'sum'
+    }).reset_index()
     
-    # Gerçekleşen ve Hedef tablolarını birleştirme
-    if not act_sum.empty and not tar_sum.empty:
-        merged = pd.merge(
-            act_sum, tar_sum, 
-            on=['region', 'product_name'], 
-            how='outer', suffixes=('_Gerçek', '_Hedef')
-        ).fillna(0)
-        
-        # Gerçekleşme Yüzdesi (Ciro bazlı)
-        merged['Başarı %'] = (merged['Ciro (KDV Hariç)_Gerçek'] / merged['Ciro (KDV Hariç)_Hedef']) * 100
-        
-        # Tabloyu Formatlama
-        final_table = merged[[
-            'region', 'product_name', 'Toplam Adet_Gerçek', 
-            'Ciro (KDV Dahil)_Gerçek', 'Ciro (KDV Hariç)_Gerçek', 
-            'MF Maliyeti (KDV Hariç)_Gerçek', 'Brüt Kar_Gerçek', 'Başarı %'
-        ]]
-        
-        st.dataframe(
-            final_table.style.format({
-                "Ciro (KDV Dahil)_Gerçek": "{:,.0f} €",
-                "Ciro (KDV Hariç)_Gerçek": "{:,.0f} €",
-                "MF Maliyeti (KDV Hariç)_Gerçek": "{:,.0f} €",
-                "Brüt Kar_Gerçek": "{:,.0f} €",
-                "Başarı %": "%{:.1f}"
-            }), 
-            use_container_width=True
-        )
+    st.dataframe(region_table.style.format({
+        'Net_Ciro_MF_Dusus_Haric': '{:,.2f} €'
+    }), use_container_width=True)
 
-    st.markdown("---")
+# Dashboard Bölümleri
+st.markdown(f"<h3 style='color:{COLOR_SCHEME[0]}'>✅ GERÇEKLEŞEN FATURALAR</h3>", unsafe_allow_html=True)
+render_summary_table(actuals, "Gerçekleşen", COLOR_SCHEME[0])
 
-    # --- AI TAHMİN GRAFİĞİ ---
-    if not actuals.empty:
-        st.subheader("📈 12 Aylık AI Satış Tahmini (Fatura Bazlı)")
-        model, fcst = run_ai_forecast(actuals)
-        fig = px.line(fcst, x='ds', y='yhat', title="Mevcut Fatura Trendine Göre Gelecek Projeksiyonu")
-        st.plotly_chart(fig, use_container_width=True)
-    
-else:
-    st.warning("⚠️ Veri girişi bekleniyor. Lovable üzerinden veri girildiğinde raporlar canlanacak.")
+st.markdown("---")
+
+st.markdown(f"<h3 style='color:{COLOR_SCHEME[2]}'>🎯 HEDEFLER (FORECAST)</h3>", unsafe_allow_html=True)
+render_summary_table(forecasts, "Tahminler", COLOR_SCHEME[2])
+
+st.markdown("---")
+
+# Renkli AI Grafiği
+if not actuals.empty:
+    st.subheader("📈 Renkli AI Gelecek Projeksiyonu")
+    model, fcst = run_ai_forecast(actuals)
+    fig = px.line(fcst, x='ds', y='yhat', 
+                  title="Fatura Trendine Göre Gelecek Tahmini",
+                  color_discrete_sequence=[COLOR_SCHEME[0]]) # Grafiği renklendirdik
+    fig.update_traces(line=dict(width=4)) # Çizgiyi kalınlaştırdık
+    st.plotly_chart(fig, use_container_width=True)
