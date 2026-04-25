@@ -19,9 +19,13 @@ def get_data():
         if not df.empty:
             # Tarih dönüşümü
             df['created_at'] = pd.to_datetime(df['created_at'])
-            # Status'e göre ayır (küçük/büyük harf duyarlılığını kaldırdık)
-            actuals = df[df['status'].str.lower() == 'invoice']
-            forecasts = df[df['status'].str.lower() == 'forecast']
+            
+            # Status sütunundaki boşlukları sil ve hepsini küçük harfe çevirerek karşılaştır
+            df['status_clean'] = df['status'].get(df['status'], df['status']).astype(str).str.strip().str.lower()
+            
+            actuals = df[df['status_clean'] == 'invoice']
+            forecasts = df[df['status_clean'] == 'forecast']
+            
             return actuals, forecasts
     except Exception as e:
         st.error(f"Veri çekme hatası: {e}")
