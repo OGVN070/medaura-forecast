@@ -4,11 +4,7 @@ import pandas as pd
 
 # --- 1. BAĞLANTI (Önder için temizlendi) ---
 URL = "https://vbmzsfrbfgbxfbqlrutx.supabase.co"
-# Bu anahtar RLS engellerini aşar ve doğrudan veriyi çeker
-KEY = st.secrets.get("SUPABASE_KEY") if "SUPABASE_KEY" in st.secrets else "EY_BURAYA_SUPABASE_EKRANINDAKI_SERVICE_ROLE_KEYI_YAPISTIR"
-
-# Eğer KEY hala tırnak içindeyse, lütfen Supabase ekranındaki 
-# 'service_role' (secret) kısmındaki butona basıp buraya yapıştır.
+KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZibXpzZnJiZmdieGZicWxydXR4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjE1MjUxOCwiZXhwIjoyMDkxNzI4NTE4fQ.9WH-lRkVqb8DTNC0krrq8YHFg8TjBfDYFPvxilcCx6U"
 
 try:
     supabase = create_client(URL, KEY)
