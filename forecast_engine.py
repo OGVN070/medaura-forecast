@@ -11,77 +11,58 @@ supabase = create_client(URL, KEY)
 
 st.set_page_config(page_title="MedAura Sales Forecast", layout="wide")
 
-# --- 2. VERİ ÇEKME ---
+# --- 2. VERİ ÇEKME FONKSİYONU ---
 def get_data():
     try:
         response = supabase.table("sales_entries").select("*").execute()
         df = pd.DataFrame(response.data)
-        if not df.empty:
-            df['created_at'] = pd.to_datetime(df['created_at'])
-            # Status temizliği: boşlukları at, küçük harfe çevir
-            df['status_check'] = df['status'].astype(str).str.strip().str.lower()
-            
-            # Lovable'dan gelebilecek tüm varyasyonları kapsayalım
-            actuals = df[df['status_check'].isin(['invoice', 'fatura', 'kesilmiş fatura (invoice)'])]
-            forecasts = df[df['status_check'].isin(['forecast', 'tahmin', 'tahmin (forecast)'])]
-            
-            return actuals, forecasts
+        return df
     except Exception as e:
         st.error(f"Veri çekme hatası: {e}")
-    return pd.DataFrame(), pd.DataFrame()
+        return pd.DataFrame()
 
-# --- 3. AI TAHMİN MOTORU ---
-def run_ai_forecast(df, horizon=6):
-    if df.empty:
-        return None, None
-    forecast_df = df.groupby('created_at')['revenue_euro'].sum().reset_index()
-    forecast_df.columns = ['ds', 'y']
-    forecast_df['ds'] = forecast_df['ds'].dt.tz_localize(None)
-    m = Prophet(yearly_seasonality=True, daily_seasonality=False, weekly_seasonality=False)
-    m.fit(forecast_df)
-    future = m.make_future_dataframe(periods=horizon, freq='MS')
-    forecast = m.predict(future)
-    return m, forecast
-
-# --- 4. DASHBOARD ---
+# --- 3. DASHBOARD BAŞLIĞI ---
 st.title("📊 MedAura Satış & Finans Paneli")
 
-actuals, forecasts = get_data()
-COLOR_SCHEME = ["#00B4D8", "#90E0EF", "#0077B6", "#48CAE4"]
+raw_data = get_data()
 
-def render_summary_table(df_in, title):
-    if df_in.empty:
-        st.info(f"{title} için henüz kayıt bulunmuyor.")
-        return
+# --- 4. VERİ ANALİZ VE GÖSTERİM ---
+if not raw_data.empty:
+    st.success(f"✅ Veritabanında {len(raw_data)} kayıt bulundu!")
+    
+    # Veritabanındaki 'status' kolonunda ne yazdığını görelim
+    if 'status' in raw_data.columns:
+        unique_status = raw_data['status'].unique()
+        st.info(f"💡 Veritabanındaki Kayıt Türleri: {list(unique_status)}")
+        
+        # Filtreleme için temizlik
+        raw_data['status_check'] = raw_data['status'].astype(str).str.strip().str.lower()
+        
+        # Filtreleri Lovable'ın muhtemel dillerine göre genişletelim
+        actuals = raw_data[raw_data['status_check'].isin(['invoice', 'fatura', 'kesilmiş fatura (invoice)'])]
+        forecasts = raw_data[raw_data['status_check'].isin(['forecast', 'tahmin', 'tahmin (forecast)'])]
 
-    df_in['MF_Maliyet'] = df_in['revenue_euro'] - df_in['profit_euro']
-    df_in['Net_Ciro_Haric'] = df_in['revenue_euro'] - df_in['MF_Maliyet']
-    df_in['Ciro_Dahil'] = df_in['revenue_euro'] * 1.20
+        # --- TABLO GÖRÜNÜMÜ ---
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.subheader("✅ GERÇEKLEŞEN (Fatura)")
+            if not actuals.empty:
+                st.dataframe(actuals, use_container_width=True)
+            else:
+                st.warning("Eşleşen 'fatura' kaydı yok.")
 
-    st.subheader(f"📋 {title} - Detaylı Özet")
-    customer_table = df_in.groupby(['customer', 'region', 'product']).agg({
-        'qty_paid': 'sum',
-        'qty_free': 'sum',
-        'revenue_euro': 'sum',
-        'Ciro_Dahil': 'sum',
-        'Net_Ciro_MF_Dusus_Haric': 'sum' if 'Net_Ciro_MF_Dusus_Haric' in df_in.columns else 'revenue_euro'
-    }).reset_index()
+        with col2:
+            st.subheader("🎯 HEDEFLER (Forecast)")
+            if not forecasts.empty:
+                st.dataframe(forecasts, use_container_width=True)
+            else:
+                st.warning("Eşleşen 'tahmin' kaydı yok.")
+    
+    # Veritabanında ne varsa ham olarak görelim (Hata ayıklamak için en iyisi)
+    with st.expander("🔍 Tüm Veritabanını Ham Olarak Listele (İncele)"):
+        st.write(raw_data)
 
-    st.dataframe(customer_table, use_container_width=True)
-
-# Dashboard Bölümleri
-st.markdown(f"<h3 style='color:{COLOR_SCHEME[0]}'>✅ GERÇEKLEŞEN FATURALAR</h3>", unsafe_allow_html=True)
-render_summary_table(actuals, "Gerçekleşen")
-
-st.markdown("---")
-
-st.markdown(f"<h3 style='color:{COLOR_SCHEME[2]}'>🎯 HEDEFLER (FORECAST)</h3>", unsafe_allow_html=True)
-render_summary_table(forecasts, "Tahminler")
-
-if not actuals.empty:
-    st.markdown("---")
-    st.subheader("📈 AI Gelecek Projeksiyonu")
-    model, fcst = run_ai_forecast(actuals)
-    if fcst is not None:
-        fig = px.line(fcst, x='ds', y='yhat', title="Tahmin Trendi", color_discrete_sequence=[COLOR_SCHEME[0]])
-        st.plotly_chart(fig, use_container_width=True)
+else:
+    st.error("❌ Veritabanı şu an boş görünüyor. Lovable üzerinden bir kayıt girmeyi deneyin.")
+    st.info("Eğer Lovable'da veri görüyorsanız, Supabase RLS ayarlarını veya API anahtarlarını kontrol etmeliyiz.")
