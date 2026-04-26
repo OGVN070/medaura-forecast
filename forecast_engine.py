@@ -17,16 +17,23 @@ def get_data():
         response = supabase.table("sales_entries").select("*").execute()
         df = pd.DataFrame(response.data)
         if not df.empty:
-            # Tarih dönüşümü
+            # Tarih kolonunu güvenli hale getir
             df['created_at'] = pd.to_datetime(df['created_at'])
             
-            # Status sütunundaki boşlukları sil ve hepsini küçük harfe çevirerek karşılaştır
-            df['status_clean'] = df['status'].get(df['status'], df['status']).astype(str).str.strip().str.lower()
+            # KRİTİK DÜZELTME: Status sütununu temizle
+            # Tüm boşlukları sil ve hepsini küçük harfe çevir
+            df['status_check'] = df['status'].astype(str).str.strip().str.lower()
             
-            actuals = df[df['status_clean'] == 'invoice']
-            forecasts = df[df['status_clean'] == 'forecast']
+            # Lovable 'invoice' veya 'fatura' yazıyor olabilir, ikisini de kabul et
+            actuals = df[df['status_check'].isin(['invoice', 'fatura', 'kesilmiş fatura (invoice)'])]
+            
+            # Lovable 'forecast' veya 'tahmin' yazıyor olabilir
+            forecasts = df[df['status_check'].isin(['forecast', 'tahmin', 'tahmin (forecast)'])]
             
             return actuals, forecasts
+    except Exception as e:
+        st.error(f"Veri çekme hatası: {e}")
+    return pd.DataFrame(), pd.DataFrame()
     except Exception as e:
         st.error(f"Veri çekme hatası: {e}")
     return pd.DataFrame(), pd.DataFrame()
