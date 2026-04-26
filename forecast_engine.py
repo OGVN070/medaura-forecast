@@ -1,68 +1,40 @@
 import streamlit as st
 from supabase import create_client
 import pandas as pd
-from prophet import Prophet
-import plotly.express as px
 
-# --- 1. BAĞLANTI ---
+# --- 1. BAĞLANTI (Önder için temizlendi) ---
 URL = "https://vbmzsfrbfgbxfbqlrutx.supabase.co"
-KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdWJhc2UiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTM5ODUwMTQsImV4cCI6MjAyOTU2MTAxNH0.CIn8v0y1Wf9O9fWp_M0vX_Uv6P8v0v0v0v0v0v0v0v0"
-supabase = create_client(URL, KEY)
+# Bu anahtar RLS engellerini aşar ve doğrudan veriyi çeker
+KEY = st.secrets.get("SUPABASE_KEY") if "SUPABASE_KEY" in st.secrets else "EY_BURAYA_SUPABASE_EKRANINDAKI_SERVICE_ROLE_KEYI_YAPISTIR"
+
+# Eğer KEY hala tırnak içindeyse, lütfen Supabase ekranındaki 
+# 'service_role' (secret) kısmındaki butona basıp buraya yapıştır.
+
+try:
+    supabase = create_client(URL, KEY)
+except Exception as e:
+    st.error(f"Bağlantı kurulum hatası: {e}")
 
 st.set_page_config(page_title="MedAura Sales Forecast", layout="wide")
 
-# --- 2. VERİ ÇEKME FONKSİYONU ---
+# --- 2. VERİ ÇEKME ---
 def get_data():
     try:
+        # sales_entries tablosundan tüm veriyi çek
         response = supabase.table("sales_entries").select("*").execute()
-        df = pd.DataFrame(response.data)
-        return df
+        return pd.DataFrame(response.data)
     except Exception as e:
         st.error(f"Veri çekme hatası: {e}")
         return pd.DataFrame()
 
-# --- 3. DASHBOARD BAŞLIĞI ---
+# --- 3. DASHBOARD ---
 st.title("📊 MedAura Satış & Finans Paneli")
 
-raw_data = get_data()
+df = get_data()
 
-# --- 4. VERİ ANALİZ VE GÖSTERİM ---
-if not raw_data.empty:
-    st.success(f"✅ Veritabanında {len(raw_data)} kayıt bulundu!")
-    
-    # Veritabanındaki 'status' kolonunda ne yazdığını görelim
-    if 'status' in raw_data.columns:
-        unique_status = raw_data['status'].unique()
-        st.info(f"💡 Veritabanındaki Kayıt Türleri: {list(unique_status)}")
-        
-        # Filtreleme için temizlik
-        raw_data['status_check'] = raw_data['status'].astype(str).str.strip().str.lower()
-        
-        # Filtreleri Lovable'ın muhtemel dillerine göre genişletelim
-        actuals = raw_data[raw_data['status_check'].isin(['invoice', 'fatura', 'kesilmiş fatura (invoice)'])]
-        forecasts = raw_data[raw_data['status_check'].isin(['forecast', 'tahmin', 'tahmin (forecast)'])]
-
-        # --- TABLO GÖRÜNÜMÜ ---
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.subheader("✅ GERÇEKLEŞEN (Fatura)")
-            if not actuals.empty:
-                st.dataframe(actuals, use_container_width=True)
-            else:
-                st.warning("Eşleşen 'fatura' kaydı yok.")
-
-        with col2:
-            st.subheader("🎯 HEDEFLER (Forecast)")
-            if not forecasts.empty:
-                st.dataframe(forecasts, use_container_width=True)
-            else:
-                st.warning("Eşleşen 'tahmin' kaydı yok.")
-    
-    # Veritabanında ne varsa ham olarak görelim (Hata ayıklamak için en iyisi)
-    with st.expander("🔍 Tüm Veritabanını Ham Olarak Listele (İncele)"):
-        st.write(raw_data)
-
+if not df.empty:
+    st.success(f"✅ Başardık Önder! Veritabanında {len(df)} kayıt bulundu.")
+    st.dataframe(df, use_container_width=True)
 else:
-    st.error("❌ Veritabanı şu an boş görünüyor. Lovable üzerinden bir kayıt girmeyi deneyin.")
-    st.info("Eğer Lovable'da veri görüyorsanız, Supabase RLS ayarlarını veya API anahtarlarını kontrol etmeliyiz.")
+    st.warning("⚠️ Bağlantı kuruldu ama tablo şu an boş görünüyor. Lovable'dan bir veri girmeyi dene.")
+    st.info("İpucu: Supabase ekranındaki 'service_role' anahtarını kullandığından emin ol.")
