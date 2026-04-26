@@ -4,8 +4,7 @@ import pandas as pd
 
 # --- 1. BAĞLANTI (Önder için temizlendi) ---
 URL = "https://vbmzsfrbfgbxfbqlrutx.supabase.co"
-KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZibXpzZnJiZmdieGZicWxydXR4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjE1MjUxOCwiZXhwIjoyMDkxNzI4NTE4fQ.9WH-lRkVqb8DTNC0krrq8YHFg8TjBfDYFPvxilcCx6U"
-
+KEY = st.secrets["SUPABASE_KEY"]
 try:
     supabase = create_client(URL, KEY)
 except Exception as e:
