@@ -5,7 +5,7 @@ from prophet import Prophet
 import plotly.express as px
 
 # --- 1. BAĞLANTI ---
-URL = "https://vbmzsfrbfgbxfbqlrutx.supabase.co"
+URL = "https://vbmzsfrbfgbxfbqlrutx.supabase.co/rest/v1/"
 KEY = "sb_publishable_m3NadgtQs-AijCRabSPm6A_UQ0eRfiN"
 supabase = create_client(URL, KEY)
 
