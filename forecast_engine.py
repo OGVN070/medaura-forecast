@@ -2,11 +2,16 @@ import streamlit as st
 from supabase import create_client
 import pandas as pd
 
-# --- 1. BAĞLANTI (Önder için temizlendi) ---
+# --- 1. BAĞLANTI (GÜVENLİ YÖNTEM) ---
 URL = "https://vbmzsfrbfgbxfbqlrutx.supabase.co"
-KEY = st.secrets["SUPABASE_KEY"]
+
+# Anahtarı koddaki yazıdan değil, Streamlit Secrets'tan (kasadan) alıyoruz
 try:
+    KEY = st.secrets["SUPABASE_KEY"]
     supabase = create_client(URL, KEY)
+except Exception as e:
+    st.error("Kasa (Secrets) anahtarı bulunamadı veya hatalı. Lütfen Streamlit ayarlarını kontrol et.")
+    st.stop()
 except Exception as e:
     st.error(f"Bağlantı kurulum hatası: {e}")
 
