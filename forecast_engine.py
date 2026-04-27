@@ -2,12 +2,12 @@ import streamlit as st
 from supabase import create_client
 import pandas as pd
 
-# --- BAĞLANTI (GERÇEK ADRES) ---
-# Ekran görüntüsündeki subdomain'i kullanarak doğru adresi kurduk
-URL = "https://forecast-buddy-36.supabase.co"
+# --- 1. BAĞLANTI AYARLARI ---
+# Lovable'ın onayladığı gerçek adres:
+URL = "https://mywkkeeecykncwlooysz.supabase.co"
 
 try:
-    # Key'i kasadan alıyoruz (Key hala aynıdır, o değişmez)
+    # Service Role Key'i kasadan alıyoruz (RLS'yi geçmek için şart!)
     KEY = st.secrets["SUPABASE_KEY"].strip()
     supabase = create_client(URL, KEY)
 except Exception as e:
@@ -17,15 +17,24 @@ except Exception as e:
 st.set_page_config(page_title="MedAura Dashboard", layout="wide")
 st.title("📊 MedAura Satış & Finans Paneli")
 
-# --- VERİ ÇEKME ---
+# --- 2. VERİ ÇEKME ---
 try:
+    # RLS'yi bypass ederek tüm kayıtları çekiyoruz
     res = supabase.table("sales_entries").select("*").execute()
     df = pd.DataFrame(res.data)
     
     if not df.empty:
-        st.success(f"✅ SONUNDA! Doğru projeye bağlandık. {len(df)} kayıt çekildi.")
+        st.success(f"✅ BAŞARDIK! Güvenlik duvarı geçildi. {len(df)} kayıt yüklendi.")
+        
+        # Tabloyu gösterelim
+        st.subheader("📋 Mevcut Satış Verileri")
         st.dataframe(df, use_container_width=True)
+        
+        # Grafik için küçük bir ön izleme
+        if "revenue_euro" in df.columns:
+            st.line_chart(df.set_index("created_at")["revenue_euro"] if "created_at" in df.columns else df["revenue_euro"])
+            
     else:
-        st.warning("⚠️ Adres doğru ama tablo şu an boş görünüyor. Lovable'dan bir veri girer misin?")
+        st.warning("⚠️ Bağlantı kuruldu ama tablo hala boş. Lovable'dan veri girdiğine emin ol.")
 except Exception as e:
-    st.error(f"Bağlantı başarılı ama tablo hatası: {e}")
+    st.error(f"Veri çekme hatası (RLS engeli olabilir mi?): {e}")
