@@ -2,11 +2,12 @@ import streamlit as st
 from supabase import create_client
 import pandas as pd
 
-# --- 1. BAĞLANTI (Kasa Uyumlu) ---
-URL = "https://vbmzsfrbfgbxfbqlrutx.supabase.co"
-try:
-    KEY = st.secrets["SUPABASE_KEY"]
-    supabase = create_client(URL, KEY)
+# --- 1. BAĞLANTI (Yeni Eve Taşındık) ---
+# Kasadan (Secrets) bilgileri çekiyoruz
+URL = st.secrets["SUPABASE_URL"]
+KEY = st.secrets["SUPABASE_KEY"]
+
+supabase = create_client(URL, KEY)
 except:
     st.error("Kasa anahtarı hatası!")
     st.stop()
