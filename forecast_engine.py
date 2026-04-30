@@ -3,11 +3,16 @@ from supabase import create_client
 import pandas as pd
 
 # --- LOVABLE'IN DÜZELTTİĞİ DOĞRU ADRES ---
-URL = "https://mywkkeeecykncwlooysz.supabase.co"
+URL = "https://mywkkeeeckyncwlooysz.supabase.co"
+
 
 try:
     # Service Role Key'i kasadan alıyoruz
-    KEY = st.secrets["SUPABASE_KEY"].strip()
+    KEY = st.secrets.get("SUPABASE_SERVICE_ROLE_KEY", st.secrets.get("SUPABASE_KEY", "")).strip()
+if not KEY:
+    st.error("Service Role Key bulunamadı. Streamlit Secrets'a SUPABASE_SERVICE_ROLE_KEY ekleyin.")
+    st.stop()
+
     supabase = create_client(URL, KEY)
 except Exception as e:
     st.error(f"Kasa hatası: {e}")
