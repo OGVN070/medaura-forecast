@@ -9,7 +9,7 @@ st.title("🕵️‍♂️ MedAura Bağlantı Dedektifi")
 # --- TEST VERİLERİ (DOĞRUDAN YAZILDI) ---
 URL = "https://mywkkeeecykncwlooysz.supabase.co"
 # Aşağıdaki KEY kısmına Lovable'ın verdiği Service Role Key'i yapıştır
-KEY = "BURAYA_LOVABLE_SERVICE_ROLE_KEYI_YAPISTIR"
+KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZibXpzZnJiZmdieGZicWxydXR4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NjE1MjUxOCwiZXhwIjoyMDkxNzI4NTE4fQ.9WH-lRkVqb8DTNC0krrq8YHFg8TjBfDYFPvxilcCx6U"
 
 # 1. TEST: İnternet adresi çözülebiliyor mu?
 st.subheader("1. Aşama: DNS Testi")
