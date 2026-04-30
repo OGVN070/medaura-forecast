@@ -7,7 +7,8 @@ import plotly.express as px
 st.set_page_config(page_title="MedAura Finansal Analiz", layout="wide")
 
 URL = st.secrets["SUPABASE_URL"].strip()
-KEY = st.secrets["SUPABASE_KEY"].strip()
+KEY = st.secrets["SUPABASE_SERVICE_ROLE_KEY"].strip()
+
 supabase = create_client(URL, KEY)
 
 # --- VERİ ÇEKME FONKSİYONU ---
