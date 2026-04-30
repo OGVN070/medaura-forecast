@@ -1,22 +1,23 @@
 import streamlit as st
-from supabase import create_client
+from supabase import create_client, Client
 import pandas as pd
 
-# --- LOVABLE'IN DÜZELTTİĞİ DOĞRU ADRES ---
 URL = "https://mywkkeeeckyncwlooysz.supabase.co"
 
-
 try:
-    # Service Role Key'i kasadan alıyoruz
-    KEY = st.secrets.get("SUPABASE_SERVICE_ROLE_KEY", st.secrets.get("SUPABASE_KEY", "")).strip()
-if not KEY:
-    st.error("Service Role Key bulunamadı. Streamlit Secrets'a SUPABASE_SERVICE_ROLE_KEY ekleyin.")
+    KEY = st.secrets["SUPABASE_SERVICE_ROLE_KEY"]
+except KeyError:
+    st.error("❌ SUPABASE_SERVICE_ROLE_KEY secret tanımlı değil. Streamlit Cloud → Settings → Secrets'a ekleyin.")
     st.stop()
 
-    supabase = create_client(URL, KEY)
-except Exception as e:
-    st.error(f"Kasa hatası: {e}")
+if not KEY:
+    st.error("❌ SUPABASE_SERVICE_ROLE_KEY boş.")
     st.stop()
+
+supabase: Client = create_client(URL, KEY)
+
+df = pd.DataFrame(supabase.table("sales_entries").select("*").execute().data)
+st.dataframe(df)
 
 st.set_page_config(page_title="MedAura Dashboard", layout="wide")
 st.title("📊 MedAura Satış Dashboard")
